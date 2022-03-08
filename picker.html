@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="initial-scale=1.0">
+<title>Picker</title>
+<style>
+body {
+    background:#FFF;
+    color:#000;
+    font-family:verdana, sans-serif;
+    font-size:10pt;
+    margin:0;
+    padding:10px;
+}
+
+a:link, a:visited {
+    color:#008;
+    font-weight:bold;
+    text-decoration:none;
+}
+
+a:active, a:hover {
+    color:#ACF;
+}
+
+.info {
+    font-weight:bold;
+}
+
+button {
+    font-family:inherit;
+    cursor:pointer;
+    border:0;
+    border-radius:3px;
+    padding:0.3em 0.5em;
+    background:#CCC;
+    color:#000;
+}
+
+button:hover {
+    background:#DDD;
+}
+
+button.disabled {
+    background:#DDD;
+    color:#888;
+    cursor:not-allowed;
+}
+
+button.disabled:hover {
+    background:#DDD;
+}
+
+#container {
+    position:relative;
+    margin-left:-10px;
+    margin-right:-10px;
+    padding:10px;
+    overflow:hidden;
+}
+
+@media (min-width:1024px) {
+    /* Put the found favorites beside the picking div when the window is sufficiently large */
+    #picking {
+        float:left;
+        width:636px;
+    }
+
+    #secondary {
+        margin-left:646px;
+    }
+}
+
+@media (min-width:1300px) {
+    /* Once we get to the point where 636px is less than half of the width of the screen, make the picking div just take up half */
+    #picking {
+        width:50%;
+    }
+
+    #secondary {
+        margin-left:51%;
+    }
+}
+
+#pick {
+    background:#58F;
+    color:#FFF;
+    font-size:larger;
+    font-weight:bold;
+    width:6em;
+    border-radius:5px;
+    margin-right:10px;
+}
+
+#pick.disabled {
+    background:#ACF;
+}
+
+#pick:hover {
+    background:#ACF;
+}
+
+.item-list {
+    padding:0;
+    list-style-type:none;
+    line-height:100px;
+}
+
+.item-list li {
+    margin:0;
+    display:inline-block;
+    height:100px;
+    width:100px;
+    line-height:100px;
+    border:3px solid transparent;
+    text-align:center;
+    position:relative;
+    vertical-align:top;
+    overflow:hidden;
+    border-radius:100%;
+    background:#F7F7F7;
+    color:#000;
+}
+
+.item-list li img {
+    vertical-align:middle;
+    max-height:100%;
+    max-width:100%;
+}
+
+.item-list li span {
+    display:inline-block;
+    vertical-align:middle;
+    line-height:1.2;
+}
+
+@media (max-width:636px) {
+    .item-list {
+        line-height:75px;
+    }
+
+    .item-list li {
+        line-height:75px;
+        height:75px;
+        width:75px;
+    }
+}
+
+@media (max-width:423px) {
+    .item-list {
+        line-height:50px;
+    }
+
+    .item-list li {
+        line-height:50px;
+        height:50px;
+        width:50px;
+    }
+}
+
+#evaluating li {
+    cursor:pointer;
+}
+
+#favorites li {
+    cursor:move;
+}
+
+.item-list li:hover {
+    background:#CDF;
+}
+
+.item-list.sorting li:hover {
+    background:#F7F7F7;
+}
+
+#evaluating li.selected {
+    border:3px solid #7AC;
+}
+
+#evaluating, #buttons {
+    text-align:center;
+    margin:auto;
+}
+
+#evaluating li.notice {
+    width:auto;
+    height:auto;
+    max-width:260px;
+    margin:auto;
+    background:#F7F7F7;
+    border-radius:10px;
+    padding:30px 30px;
+    color:#000;
+    text-align:center;
+    line-height:1.4;
+    cursor:auto;
+    font-size:10pt;
+}
+
+#buttons {
+    margin-top:30px;
+    position:relative;
+    z-index:3;
+}
+</style>
+</head>
+<body>
+<h1>Girl's Frontline Waifu Finder</h1>
+
+<p><a href="https://github.com/antialiasis/favorite-picker">You can find the original code here.</a></p>
+
+<div id="first">
+<p style="color:#ff9999">NOTE: the outfits they are wearing I have decided look the best, they are not nessisarily what they will look like stock.</p>
+
+<div id="container">
+<div id="picking">
+<ul id="evaluating" class="item-list">
+</ul>
+
+<p id="buttons"><button id="pick">Pick</button> <button id="pass">Pass</button> <button id="undo">Undo</button> <button id="redo">Redo</button></p>
+</div>
+
+<div id="secondary">
+<h2>Found favorites</h2>
+
+<ol id="favorites" class="item-list">
+</ol>
+</div>
+</div>
+<script src="https://code.jquery.com/jquery-1.12.4.min.js"></script>
+<script src="picker.js"></script>
+<script src="picker-ui.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.7.0/Sortable.min.js"></script>
+<script>
+'use strict';
+
+var items = [
+    <!-- Handguns (63) -->
+    {id: 'brenten', name: 'Bren Ten', image: 'brenten.png'},
+    {id: 'fnp9', name: 'FNP-9', image: 'fnp9.png'},
+    {id: 'm1911', name: 'M1911', image: 'm1911.png'}, 
+    {id: 'mp446', name: 'MP446', image: 'mp446.png'},
+    {id: 'nagantrev', name: 'Nagant Revolver', image: 'nagantrev.png'},
+    {id: 'p38', name: 'P38', image: 'p38.png'}, 
+    {id: 'ppk', name: 'PPK', image: 'ppk.png'},
+    {id: 'usp', name: 'USP Compact', image: 'usp.png'}, 
+    {id: 'c96', name: 'C96', image: 'c96.png'},
+    {id: 'astra', name: 'Astra Revolver', image: 'astra.png'},
+    {id: 'cz52', name: 'CZ52', image: 'cz52.png'}, 
+    {id: 'gsh18', name: 'GSh-18', image: 'gsh18.png'},
+    {id: 'g17', name: 'Glock 17', image: 'g17.png'},
+    {id: 'hk45', name: 'HK45', image: 'hk45.png'}, 
+    {id: 'm9', name: 'M9', image: 'm9.png'},
+    {id: 'mp443', name: 'MP-443', image: 'mp443.png'}, 
+    {id: 'mp448', name: 'MP-448', image: 'mp448.png'},
+    {id: 'makarov', name: 'Makarov', image: 'makarov.png'},
+    {id: 'p08', name: 'P08', image: 'p08.png'}, 
+    {id: 'p226', name: 'P226', image: 'p226.png'},
+    {id: 'p99', name: 'P99', image: 'p99.png'},
+    {id: 'psm', name: 'PSM', image: 'psm.png'}, 
+    {id: 'qsb91', name: 'QSb-91', image: 'qsb91.png'},
+    {id: 'serd', name: 'Serdyukov', image: 'serd.png'}, 
+    {id: 'tec9', name: 'TEC-9', image: 'tec9.png'},
+    {id: 'toka', name: 'Tokarev', image: 'toka.png'},
+    {id: 't59', name: 'Type 59', image: 't59.png'}, 
+    {id: 't92', name: 'Type 92', image: 't92.png'},
+    {id: 'vp70', name: 'VP70', image: 'vp70.png'},
+    {id: 'wkp', name: 'WKp', image: 'wkp.png'}, 
+    {id: 'cz100', name: 'CZ 100', image: 'cz100.png'}, 
+    {id: 'saa', name: 'Colt Revolver', image: 'saa.png'},
+    {id: 'derring', name: 'Derringer', image: 'derring.png'},
+    {id: 'jericho', name: 'Jericho', image: 'jericho.png'}, 
+    {id: 'k5', name: 'K5', image: 'k5.png'},
+    {id: 'mk23', name: 'Mk23', image: 'mk23.png'}, 
+    {id: 'p30', name: 'P30', image: 'p30.png'},
+    {id: 'p7', name: 'P7', image: 'p7.png'}, 
+    {id: 'ppq', name: 'PPQ', image: 'ppq.png'},
+    {id: 'rz1', name: 'Rex Zero 1', image: 'rz1.png'},
+    {id: 'spp1', name: 'SPP-1', image: 'spp1.png'}, 
+    {id: 'spitfire', name: 'Spitfire', image: 'spitfire.png'},
+    {id: 'stech', name: 'Stechkin', image: 'stech.png'},
+    {id: 'thunder', name: 'Thunder', image: 'thunder.png'}, 
+    {id: 'zip', name: 'ZiP 22', image: 'zip.png'}, 
+    {id: 'c93', name: 'C-93', image: 'c93.png'},
+    {id: 'cz75', name: 'CZ75', image: 'cz75.png'}, 
+    {id: 'conten', name: 'Contender', image: 'conten.png'},
+    {id: 'deagle', name: 'Desert Eagle', image: 'deagle.png'},
+    {id: '57', name: 'Five-seveN', image: '57.png'}, 
+    {id: 'grizzly', name: 'Grizzly MkV', image: 'grizzly.png'}, 
+    {id: 'hp35', name: 'HP-35', image: 'hp35.png'},
+    {id: 'hs2000', name: 'HS2000', image: 'hs2000.png'},
+    {id: 'kolibri', name: 'Kolibri', image: 'kolibri.png'}, 
+    {id: 'm950a', name: 'M950A', image: 'm950a.png'},
+    {id: 'nz75', name: 'NZ75', image: 'nz75.png'}, 
+    {id: 'p22', name: 'P22', image: 'p22.png'},
+    {id: 'pa15', name: 'PA-15', image: 'pa15.png'}, 
+    {id: 'p4s', name: 'Px4 Storm', image: 'p4s.png'},
+    {id: 'python', name: 'Python', image: 'python.png'},
+    {id: 'rhino', name: 'Rhino', image: 'rhino.png'}, 
+    {id: 'web', name: 'Webley', image: 'web.png'},
+    {id: 'welrod', name: 'Welrod MkII', image: 'welrod.png'},
+    <!-- Assault Rifles (79) -->
+    {id: 'f2000', name: 'F2000', image: 'f2000.png'}, 
+    {id: 'g3', name: 'G3', image: 'g3.png'}, 
+    {id: 'galil', name: 'Galil', image: 'galil.png'}, 
+    {id: 'l85', name: 'L85A1', image: 'l85.png'}, 
+    {id: 'sig510', name: 'SiG-510', image: 'sig510.png'}, 
+    {id: 't63', name: 'Type 63', image: 't63.png'}, 
+    {id: '6p62', name: '6P62', image: '6p62.png'}, 
+    {id: 'ak47', name: 'AK-47', image: 'ak47.png'}, 
+    {id: 'ar70', name: 'AR70', image: 'ar70.png'}, 
+    {id: 'arx160', name: 'ARX-160', image: 'arx160.png'}, 
+    {id: 'ash127', name: 'Ash-12.7', image: 'ash127.png'}, 
+    {id: 'cz805', name: 'CZ805', image: 'cz805.png'}, 
+    {id: 'fnc', name: 'FNC', image: 'fnc.png'}, 
+    {id: 'hk33', name: 'HK33', image: 'hk33.png'}, 
+    {id: 'INSAS', name: 'INSAS', image: 'insas.png'}, 
+    {id: 'magal', name: 'Magal', image: 'magal.png'}, 
+    {id: 'ML', name: 'Model L', image: 'ml.png'}, 
+    {id: 'ots12', name: 'OTs-12', image: 'ots12.png'}, 
+    {id: 'stg940', name: 'StG-940', image: 'stg940.png'}, 
+    {id: 'stg44', name: 'StG-44', image: 'stg44.png'}, 
+    {id: 't65', name: 'T65', image: 't65.png'}, 
+    {id: 't03', name: 'Type 03', image: 't03.png'}, 
+    {id: 'vepr', name: 'Vepr', image: 'vepr.png'}, 
+    {id: '9a91', name: '9A-91', image: '9a91.png'}, 
+    {id: 'a91', name: 'A-91', image: 'a91.png'}, 
+    {id: 'ak74m', name: 'AK-74M', image: 'ak74m.png'}, 
+    {id: 'apc556', name: 'APC556', image: 'apc556.png'}, 
+    {id: 'asval', name: 'AS Val', image: 'asval.png'}, 
+    {id: 'ak5', name: 'Ak 5', image: 'ak5.png'}, 
+    {id: 'cr21', name: 'CR-21', image: 'cr21.png'}, 
+    {id: 'cz2000', name: 'CZ2000', image: 'cz2000.png'}, 
+    {id: 'em2', name: 'EM-2', image: 'em2.png'}, 
+    {id: 'famas', name: 'FAMAS', image: 'famas.png'}, 
+    {id: 'fara83', name: 'FARA 83', image: 'fara83.png'}, 
+    {id: 'fx05', name: 'FX-05', image: 'fx05.png'}, 
+    {id: 'fedorov', name: 'Fedorov', image: 'fedorov.png'}, 
+    {id: 'g36', name: 'G36', image: 'g36.png'}, 
+    {id: 'm16a1', name: 'M16A1', image: 'm16a1.png'}, 
+    {id: 'soppu', name: 'M4 Sopmod II', image: 'soppu.png'}, 
+    {id: 'm4a1', name: 'M4A1', image: 'm4a1.png'}, 
+    {id: 'm82', name: 'M82', image: 'm82.png'}, 
+    {id: 'ribeyrolles', name: 'Ribeyrolles', image: 'ribeyrolles.png'}, 
+    {id: 'sar21', name: 'SAR-21', image: 'sar21.png'}, 
+    {id: 'ar15', name: 'ST AR-15', image: 'ar15.png'}, 
+    {id: 'tar21', name: 'Tar-21', image: 'tar21.png'}, 
+    {id: 't561', name: 'Type 56-1', image: 't561.png'}, 
+    {id: 'xm8', name: 'XM8', image: 'xm8.png'}, 
+    {id: 'a545', name: 'A-545', image: 'a545.png'}, 
+    {id: 'acr', name: 'ACR', image: 'acr.png'}, 
+    {id: 'ads', name: 'ADS', image: 'ads.png'}, 
+    {id: 'ak12', name: 'AK-12', image: 'ak12.png'}, 
+    {id: 'ak15', name: 'AK-15', image: 'ak15.png'}, 
+    {id: 'akalfa', name: 'AK-Alfa', image: 'akalfa.png'}, 
+    {id: 'an94', name: 'AN-94', image: 'an94.png'}, 
+    {id: 'art556', name: 'ART556', image: 'art556.png'}, 
+    {id: 'aug', name: 'AUG', image: 'aug.png'}, 
+    {id: 'fal', name: 'FAL', image: 'fal.png'}, 
+    {id: 'g11', name: 'G11', image: 'g11.png'}, 
+    {id: 'g41', name: 'G41', image: 'g41.png'}, 
+    {id: '416', name: 'HK416', image: '416.png'}, 
+    {id: 'ht64', name: 'Howa Type 64', image: 'ht64.png'}, 
+    {id: 'ht89', name: 'Howa Type 89', image: 'ht89.png'}, 
+    {id: 'k11', name: 'K11', image: 'k11.png'}, 
+    {id: 'k2', name: 'K2', image: 'k2.png'}, 
+    {id: 'kh2002', name: 'KH2002', image: 'kh2002.png'}, 
+    {id: 'mdr', name: 'MDR', image: 'mdr.png'}, 
+    {id: 'ots14', name: 'OTs-14', image: 'ots14.png'}, 
+    {id: 'qbz191', name: 'QBZ-191', image: 'qbz191.png'}, 
+    {id: 'r5', name: 'R5', image: 'r5.png'}, 
+    {id: 'rfb', name: 'RFB', image: 'rfb.png'}, 
+    {id: 'sigmcx', name: 'SIG MCX', image: 'sigmcx.png'}, 
+    {id: 'sig556', name: 'SIG 556', image: 'sig556.png'}, 
+    {id: 'sacr', name: 'Steyr ACR', image: 'sacr.png'}, 
+    {id: 't91', name: 'T91', image: 't91.png'}, 
+    {id: 'tkb408', name: 'TKB-408', image: 'tkb408.png'}, 
+    {id: 't95', name: 'Type 95', image: 't95.png'}, 
+    {id: 't97', name: 'Type 97', image: 't97.png'}, 
+    {id: 'vhs', name: 'VHS', image: 'vhs.png'}, 
+    {id: 'zasm21', name: 'Zas M21', image: 'zasm21.png'}, 
+    <!-- Submachine Guns (65) -->
+    {id: 'm38', name: 'M38', image: 'm38.png'},
+    {id: 'idw', name: 'IDW', image: 'idw.png'},
+    {id: 'm3', name: 'M3', image: 'm3.png'},
+    {id: 'mp40', name: 'MP40', image: 'mp40.png'},
+    {id: 'pp2000', name: 'PP-2000', image: 'pp2000.png'},
+    {id: 'ppsh41', name: 'PPSh-41', image: 'ppsh41.png'},
+    {id: 'spectre', name: 'Spectre M4', image: 'spectre.png'},
+    {id: 't64', name: 'Type 64', image: 't64.png'},
+    {id: 'm45', name: 'm45', image: 'm45.png'},
+    {id: '43m', name: '43M', image: '43m.png'},
+    {id: 'evo3', name: 'EVO 3', image: 'evo3.png'},
+    {id: 'f1', name: 'F1', image: 'f1.png'},
+    {id: 'fmg9', name: 'FMG-9', image: 'fmg9.png'},
+    {id: 'm12', name: 'M12', image: 'm12.png'},
+    {id: 'mac10', name: 'MAC-10', image: 'mac10.png'},
+    {id: 'mas38', name: 'MAS-38', image: 'mas38.png'},
+    {id: 'mp41', name: 'MP41', image: 'mp41.png'},
+    {id: 'mt9', name: 'MT-9', image: 'mt9.png'},
+    {id: 'uzi', name: 'Micro Uzi', image: 'uzi.png'},
+    {id: 'ots39', name: 'OTs-39', image: 'ots39.png'},
+    {id: 'pps43', name: 'PPS-43', image: 'pps43.png'},
+    {id: 'scw', name: 'SCW', image: 'scw.png'},
+    {id: 'sub2000', name: 'SUB-2000', image: 'sub2000.png'},
+    {id: 'skorpion', name: 'Skorpion', image: 'skorpion.png'},
+    {id: 'sten', name: 'Sten MkII', image: 'sten.png'},
+    {id: 't77', name: 'T77', image: 'vt77.png'},
+    {id: 'tmp', name: 'TMP', image: 'tmp.png'},
+    {id: 'z62', name: 'Z-62', image: 'z62.png'},
+    {id: 'ar57', name: 'AR-57', image: 'ar57.png'},
+    {id: 'cf05', name: 'CF05', image: 'cf05.png'},
+    {id: 'cx4storm', name: 'Cx4 Storm', image: 'cx4storm.png'},
+    {id: 'honey', name: 'Honey Badger', image: 'honey.png'},
+    {id: 'kacpdw', name: 'KAC-PDW', image: 'kacpdw.png'},
+    {id: 'klin', name: 'KLIN', image: 'klin.png'},
+    {id: 'mat49', name: 'MAT-49', image: 'mat49.png'},
+    {id: 'mp5', name: 'MP5', image: 'mp5.png'},
+    {id: 'pp19', name: 'PP-19', image: 'pp19.png'},
+    {id: 'pp1901', name: 'PP-19-01', image: 'pp1901.png'},
+    {id: 'pp90', name: 'PP-90', image: 'pp90.png'},
+    {id: 'ppd40', name: 'PPD-40', image: 'ppd40.png'},
+    {id: 'saf', name: 'SAF', image: 'saf.png'},
+    {id: 'shipka', name: 'Shipka', image: 'shipka.png'},
+    {id: 'ump40', name: 'UMP40', image: 'ump40.png'},
+    {id: 'ump45', name: 'UMP45', image: 'ump45.png'},
+    {id: 'ump9', name: 'UMP9', image: 'ump9.png'},
+    {id: 'vigneronm2', name: 'Vigneron M2', image: 'vigneronm2.png'},
+    {id: 'ak74u', name: 'AK-74u', image: 'ak74u.png'},
+    {id: 'augpara', name: 'AUG Para', image: 'augpara.png'},
+    {id: 'cms', name: 'C-MS', image: 'cms.png'},
+    {id: 'g36c', name: 'G36C', image: 'g36c.png'},
+    {id: 'js9', name: 'JS 9', image: 'js9.png'},
+    {id: 'lusa', name: 'Lusa', image: 'lusa.png'},
+    {id: 'mp7', name: 'MP7', image: 'mp7.png'},
+    {id: 'p90', name: 'P90', image: 'p90.png'},
+    {id: 'pm06', name: 'PM-06', image: 'pm06.png'},
+    {id: 'pm9', name: 'PM 9', image: 'pm9.png'},
+    {id: 'ro635', name: 'RO635', image: 'ro635.png'},
+    {id: 'sp9', name: 'SP9', image: 'sp9.png'},
+    {id: 'sr2', name: 'SR-2', image: 'sr2.png'},
+    {id: 'sr3mp', name: 'SR-3MP', image: 'sr3mp.png'},
+    {id: 'sterling', name: 'Sterling', image: 'sterling.png'},
+    {id: 'suomi', name: 'Suomi', image: 'suomi.png'},
+    {id: 'thompson', name: 'Thompson', image: 'thompson.png'},
+    {id: 't100', name: 'Type 100', image: 't100.png'},
+    {id: 't79', name: 'Type 79', image: 't79.png'},
+    {id: 'vp1915', name: 'VP1915', image: 'vp1915.png'},
+    {id: 'vector', name: 'Vector', image: 'vector.png'},
+    {id: 'x95', name: 'X95', image: 'x95.png'},
+    <!-- Rifles (69) -->
+    {id: 'bm59', name: 'BM59', image: 'bm59.png'},
+    {id: 'fn49', name: 'FN-49', image: 'fn49.png'},
+    {id: 'g43', name: 'G43', image: 'g43.png'},
+    {id: 'svt38', name: 'SVT-38', image: 'svt38.png'},
+    {id: 'sks', name: 'SKS', image: 'sks.png'},
+    {id: 'c14', name: 'C14', image: 'c14.png'},
+    {id: 'lynx', name: 'GM6 Lynx', image: 'lynx.png'},
+    {id: 'gm1', name: 'Gepard M1', image: 'gm1.png'},
+    {id: 'hyt88', name: 'Hanyang Type 88', image: 'hyt88.png'},
+    {id: 'm1g', name: 'M1 Garand', image: 'm1g.png'},
+    {id: 'm14', name: 'M14', image: 'm14.png'},
+    {id: 'm1a1', name: 'M1A1', image: 'm1a1.png'},
+    {id: 'm21', name: 'M21', image: 'm21.png'},
+    {id: 'obr', name: 'OBR', image: 'obr.png'},
+    {id: 'ots44', name: 'OTs-44', image: 'ots44.png'},
+    {id: 'rt20', name: 'RT-20', image: 'rt20.png'},
+    {id: 'sm1', name: 'SM-1', image: 'sm1.png'},
+    {id: 'ssg69', name: 'SSG 69', image: 'ssg69.png'},
+    {id: 'sv98', name: 'SV-98', image: 'sv98.png'},
+    {id: 'scout', name: 'Steyr Scout', image: 'scout.png'},
+    {id: 'ssass', name: 'Super SASS', image: 'ssass.png'},
+    {id: 'tcms', name: 'T-CMS', image: 'tcms.png'},
+    {id: 't56', name: 'Type 56', image: 't56.png'},
+    {id: 't81c', name: 'Type 81 Carbine', image: 't81c.png'},
+    {id: 'zasm76', name: 'Zas M76', image: 'zasm76.png'},
+    {id: 'wz29', name: 'wz.29', image: 'wz29.png'},
+    {id: 'g28', name: 'G28', image: 'g28.png'},
+    {id: 'k31', name: 'K31', image: 'k31.png'},
+    {id: 'ksvk', name: 'KSVK', image: 'ksvk.png'},
+    {id: 'mk12', name: 'Mk 12', image: 'mk12.png'},
+    {id: 'mondragon', name: 'Mondragon', image: 'mondragon.png'},
+    {id: 'mosinnagant', name: 'Mosin-Nagant', image: 'mosinnagant.png'},
+    {id: 'psg1', name: 'PSG-1', image: 'psg1.png'},
+    {id: 'ptrd', name: 'PTRD', image: 'ptrd.png'},
+    {id: 'pzb39', name: 'PzB 39', image: 'pzb39.png'},
+    {id: 'spra3g', name: 'SPR A3G', image: 'spra3g.png'},
+    {id: 'ssg3000', name: 'SSG 3000', image: 'ssg3000.png'},
+    {id: 'svd', name: 'SVD', image: 'svd.png'},
+    {id: 'springfield', name: 'Springfield', image: 'springfield.png'},
+    {id: 't5000', name: 'T-5000', image: 't5000.png'},
+    {id: 'tfq', name: 'TF-Q', image: 'tfq.png'},
+    {id: 'tabuk', name: 'Tabuk', image: 'tabuk.png'},
+    {id: 't4', name: 'Type 4', image: 't4.png'},
+    {id: 'xm3', name: 'XM3', image: 'xm3.png'},
+    {id: 'ballista', name: 'Ballista', image: 'ballista.png'},
+    {id: 'carc1891', name: 'Carcano M1891', image: 'carc1891.png'},
+    {id: 'carc9138', name: 'Carcano M91/38', image: 'carc9138.png'},
+    {id: 'dsr50', name: 'DSR-50', image: 'dsr50.png'},
+    {id: 'delisle', name: 'De Lisle', image: 'delisle.png'},
+    {id: 'generalliu', name: 'General Liu', image: 'generalliu.png'},
+    {id: 'hs50', name: 'HS.50', image: 'hs50.png'},
+    {id: 'iws2000', name: 'IWS 2000', image: 'iws2000.png'},
+    {id: 'js05', name: 'JS05', image: 'js05.png'},
+    {id: 'kar98k', name: 'Kar98k', image: 'kar98k.png'},
+    {id: 'leeenfield', name: 'Lee-Enfield', image: 'leeenfield.png'},
+    {id: 'm200', name: 'M200', image: 'm200.png'},
+    {id: 'm82a1', name: 'M82A1', image: 'm82a1.png'},
+    {id: 'm99', name: 'M99', image: 'm99.png'},
+    {id: 'ntw20', name: 'NTW-20', image: 'ntw20.png'},
+    {id: 'qbu88', name: 'QBU-88', image: 'qbu88.png'},
+    {id: 'r93', name: 'R93', image: 'r93.png'},
+    {id: 'sl8', name: 'SL8', image: 'sl8.png'},
+    {id: 'srs', name: 'SRS', image: 'srs.png'},
+    {id: 's99', name: 'Savage 99', image: 's99.png'},
+    {id: 'tac50', name: 'TAC-50', image: 't50.png'},
+    {id: 'vsk94', name: 'VSK-94', image: 'vsk94.png'},
+    {id: 'wa2000', name: 'WA2000', image: 'wa2000.png'},
+    <!-- Machine Guns (42) -->
+    {id: 'aat52', name: 'AAT-52', image: 'aat52.png'},
+    {id: 'dp28', name: 'DP-28', image: 'dp28.png'},
+    {id: 'fg42', name: 'FG42', image: 'fg42.png'},
+    {id: 'lwmmg', name: 'LWMMG', image: 'lwmmg.png'},
+    {id: 'mg34', name: 'MG34', image: 'mg34.png'},
+    {id: 'bren', name: 'Bren', image: 'bren.png'},
+    {id: 'car', name: 'CAR', image: 'car.png'},
+    {id: 'hk23', name: 'HK23', image: 'hk23.png'},
+    {id: 'k3', name: 'K3', image: 'k3.png'},
+    {id: 'm1919a4', name: 'M1919A4', image: 'm1919a4.png'},
+    {id: 'm249saw', name: 'M249 SAW', image: 'm249saw.png'},
+    {id: 'm2hb', name: 'M2HB', image: 'm2hb.png'},
+    {id: 'mg42', name: 'MG42', image: 'mg42.png'},
+    {id: 'rpd', name: 'RPD', image: 'rpd.png'},
+    {id: 't62', name: 'Type 62', image: 't62.png'},
+    {id: 'aek999', name: 'AEK-999', image: 'aek999.png'},
+    {id: 'ameli', name: 'Ameli', image: 'ameli.png'},
+    {id: 'chauchat', name: 'Chauchat', image: 'chauchat.png'},
+    {id: 'ls26', name: 'LS26', image: 'ls26.png'},
+    {id: 'm1895cb', name: 'M1895 CB', image: 'm1895cb.png'},
+    {id: 'm1918', name: 'M1918', image: 'm1918.png'},
+    {id: 'm60', name: 'M60', image: 'm60.png'},
+    {id: 'mg3', name: 'MG3', image: 'mg3.png'},
+    {id: 'mk46', name: 'Mk46', image: 'mk46.png'},
+    {id: 'mk48', name: 'Mk48', image: 'mk48.png'},
+    {id: 'pk', name: 'PK', image: 'pk.png'},
+    {id: 'pm1910', name: 'PM1910', image: 'pm1910.png'},
+    {id: 't80', name: 'Type 80', image: 't80.png'},
+    {id: 'ukm2000', name: 'UKM-2000', image: 'ukm2000.png'},
+    {id: 'hk21', name: 'HK21', image: 'hk21.png'},
+    {id: 'kord', name: 'Kord', image: 'kord.png'},
+    {id: 'lewis', name: 'Lewis', image: 'lewis.png'},
+    {id: 'mg338', name: 'MG338', image: 'mg338.png'},
+    {id: 'mg36', name: 'MG36', image: 'mg36.png'},
+    {id: 'mg4', name: 'MG4', image: 'mg4.png'},
+    {id: 'mg5', name: 'MG5', image: 'mg5.png'},
+    {id: 'negev', name: 'Negev', image: 'negev.png'},
+    {id: 'pkp', name: 'PKP', image: 'pkp.png'},
+    {id: 'rpk16', name: 'RPK-16', image: 'rpk16.png'},
+    {id: 'rpk203', name: 'RPK-203', image: 'rpk203.png'},
+    {id: 't88', name: 'Type 88', image: 't88.png'},
+    {id: 'zb26', name: 'ZB-26', image: 'zb26.png'},
+    <!-- Shotguns (34) -->
+    {id: 'hsm10', name: 'HSM10', image: 'hsm10.png'},
+    {id: 'ks23', name: 'KS-23', image: 'ks23.png'},
+    {id: 'm1897', name: 'M1897', image: 'm1897.png'},
+    {id: 'm500', name: 'M500', image: 'm500.png'},
+    {id: 'ns2000', name: 'NS2000', image: 'ns2000.png'},
+    {id: 'rmb93', name: 'RMB-93', image: 'rmb93.png'},
+    {id: 'six12', name: 'Six12', image: 'six12.png'},
+    {id: 'ts12', name: 'TS12', image: 'ts12.png'},
+    {id: 'defender', name: 'Defender', image: 'defender.png'},
+    {id: 'hk512', name: 'HK512', image: 'hk512.png'},
+    {id: 'liberator', name: 'Liberator', image: 'liberator.png'},
+    {id: 'm1014', name: 'M1014', image: 'm1014.png'},
+    {id: 'm37', name: 'M37', image: 'm37.png'},
+    {id: 'm590', name: 'M590', image: 'm590.png'},
+    {id: 'mag7', name: 'MAG-7', image: 'mag7.png'},
+    {id: 'spas12', name: 'Spas-12', image: 'spas12.png'},
+    {id: 'supershorty', name: 'Super-Shorty', image: 'supershorty.png'},
+    {id: 'supernova', name: 'Supernova', image: 'supernova.png'},
+    {id: 't97s', name: 'Type 97 Shotgun', image: 't97s.png'},
+    {id: 'usas12', name: 'USAS-12', image: 'usas12.png'},
+    {id: 'vpm5', name: 'V-PM5', image: 'vpm5.png'},
+    {id: 'aa12', name: 'AA-12', image: 'aa12.png'},
+    {id: 'caws', name: 'CAWS', image: 'caws.png'},
+    {id: 'dp12', name: 'DP-12', image: 'dp12.png'},
+    {id: 'fo12', name: 'FO-12', image: 'fo12.png'},
+    {id: 'fp6', name: 'FP-6', image: 'fp6.png'},
+    {id: 'ksg', name: 'KSG', image: 'ksg.png'},
+    {id: 'ltlx7000', name: 'LTLX 7000', image: 'ltlx7000.png'},
+    {id: 'm1887', name: 'M1887', image: 'm1887.png'},
+    {id: 'm26mass', name: 'M26-MASS', image: 'm26mass.png'},
+    {id: 'm6asw', name: 'M6-ASW', image: 'm6asw.png'},
+    {id: 'm870', name: 'M870', image: 'm870.png'},
+    {id: 'sat8', name: 'S.A.T.8', image: 'sat8.png'},
+    {id: 'saiga12', name: 'Saiga-12', image: 'saiga12.png'},
+    <!-- Extras (28) -->
+    {id: 'clear', name: 'Clear', image: 'clear.png'},
+    {id: 'fail', name: 'Fail', image: 'fail.png'},
+    {id: 'jill', name: 'Jill', image: 'jill.png'},
+    {id: 'kiana', name: 'Kiana', image: 'kiana.png'},
+    {id: 'noel', name: 'Noel', image: 'noel.png'},
+    {id: 'sei', name: 'Sei', image: 'sei.png'},
+    {id: 'theresa', name: 'Theresa', image: 'theresa.png'},
+    {id: 'angelica', name: 'Angelica', image: 'angelica.png'},
+    {id: 'medusa', name: 'Medusa', image: 'medusa.png'},
+    {id: 'muratahimeko', name: 'Murata Himeko', image: 'muratahimeko.png'},
+    {id: 'dorothy', name: 'Dorothy', image: 'dorothy.png'},
+    {id: 'henrietta', name: 'Henrietta', image: 'henrietta.png'},
+    {id: 'jashinchan', name: 'Jashin-chan', image: 'jashinchan.png'},
+    {id: 'bronya', name: 'Bronya', image: 'bronya.png'},
+    {id: 'pekora', name: 'pekora', image: 'pekora.png'},
+    {id: 'raidenmei', name: 'Raiden Mei', image: 'reidenmei.png'},
+    {id: 'rico', name: 'Rico', image: 'rico.png'},
+    {id: 'stella', name: 'Stella', image: 'stella.png'},
+    {id: 'alma', name: 'Alma', image: 'alma.png'},
+    {id: 'claes', name: 'Claes', image: 'claes.png'},
+    {id: 'yurine', name: 'Yurine', image: 'yurine.png'},
+    {id: 'dana', name: 'Dana', image: 'dana.png'},
+    {id: 'elphelt', name: 'Elphelt', image: 'elphelt.png'},
+    {id: 'minos', name: 'Minos', image: 'minos.png'},
+    {id: 'seele', name: 'Seele', image: 'seele.png'},
+    {id: 'triela', name: 'Triela', image: 'triela.png'},
+    <!-- Sangvis Ferri (28) -->
+    {id: 'agent', name: 'Agent', image: 'agent.png'},
+    {id: 'alchemist', name: 'Alchemist', image: 'alchemist.png'},
+    {id: 'architect', name: 'Architect', image: 'architect.png'},
+    {id: 'destroyer', name: 'Destroyer', image: 'destroyer.png'},
+    {id: 'dreamer', name: 'Dreamer', image: 'dreamer.png'},
+    {id: 'elisa', name: 'Elisa', image: 'elisa.png'},
+    {id: 'gager', name: 'Gager', image: 'gager.png'},
+    {id: 'hunter', name: 'Hunter', image: 'hunter.png'},
+    {id: 'intruder', name: 'Intruder', image: 'intruder.png'},
+    {id: 'judge', name: 'Judge', image: 'judge.png'},
+    {id: 'nimogen', name: 'Nimogen', image: 'nimogen.png'},
+    {id: 'ouroboros', name: 'Ouroboros', image: 'ouroboros.png'},
+    {id: 'persica', name: 'Persica', image: 'persica.png'},
+    {id: 'scarecrow', name: 'Scarecrow', image: 'scarecrow.png'},
+    <!-- Non-T-Doll (28) -->
+    {id: 'gentiane', name: 'Gentiane', image: 'gentiane.jpg'},
+    {id: 'helian', name: 'Helian', image: 'helian.png'},
+    {id: 'kalina', name: 'Kalina', image: 'kalina.png'},
+    {id: 'sier', name: 'Sier', image: 'sier.png'},
+
+];
+
+var myPicker = new picker.Picker({
+    items: items
+});
+
+var pickerUI = new PickerUI(myPicker, {
+    elements: {
+        pick: "#pick",
+        pass: "#pass",
+        undo: "#undo",
+        redo: "#redo",
+        evaluating: "#evaluating",
+        favorites: "#favorites",
+    }
+});
+
+pickerUI.initialize();
+
+/* Sortable favorites - you can safely remove this, and the Sortable.min.js script, if you don't want to be able to sort your favorite list. */
+var sortable = new Sortable(pickerUI.elem.favorites.get(0), {
+    draggable: '.item',
+    animation: 100,
+    onStart: function() {
+        pickerUI.elem.favorites.addClass("sorting");
+    },
+    onEnd: function() {
+        pickerUI.elem.favorites.removeClass("sorting");
+    },
+    onUpdate: function() {
+        myPicker.setFavorites(pickerUI.elem.favorites.children().map(function() {
+            return pickerUI.getItem(this);
+        }).get());
+        pickerUI.update(true);
+    }
+});
+/* End sortable favorites */
+</script>
+</body>
+</html>
